@@ -154,32 +154,8 @@ for(i in c(2, 4, 6, 8, 10, 12, 14, 16, 18, 20)){
                                    creditTrainDF$PROFITABLE, 0.5))
   tNodes = c(tNodes, i)
 }
-```
-
-    ## Warning in prune.tree(creditTree, best = i): best is bigger than tree size
-    
-    ## Warning in prune.tree(creditTree, best = i): best is bigger than tree size
-    
-    ## Warning in prune.tree(creditTree, best = i): best is bigger than tree size
-    
-    ## Warning in prune.tree(creditTree, best = i): best is bigger than tree size
-
-``` r
 treeDF = data.frame(tNodes, trainAcc, validAcc)
-treeDF
 ```
-
-    ##    tNodes  trainAcc  validAcc
-    ## 1       2 0.7066667 0.6400000
-    ## 2       4 0.7600000 0.6571429
-    ## 3       6 0.8019048 0.6914286
-    ## 4       8 0.8019048 0.6914286
-    ## 5      10 0.8038095 0.6685714
-    ## 6      12 0.8038095 0.6685714
-    ## 7      14 0.8038095 0.6685714
-    ## 8      16 0.8038095 0.6685714
-    ## 9      18 0.8038095 0.6685714
-    ## 10     20 0.8038095 0.6685714
 
 2)  Cutoff of 0.5 to classify accounts and measure the accuracy in the
     training and validation data for each tree. Plot the tree size
@@ -211,7 +187,7 @@ text(prunedTree,pretty=1)
 
 The best accuracy is for 6 terminal nodes.
 
-## Part4: KNN Algorithm
+## Part 4: KNN Algorithm
 
 1)  kNN algorithm for classification on the training data using the
     following variables: AGE, DURATION, RENT, TELEPHONE, FOREIGN,
@@ -326,3 +302,273 @@ Accuracy on the test data Logistic Regression Accuracy = 68.33% Tree
 Accuracy = 71% KNN Accuracy = 70%
 
 The Classification Trees are very good at predicting\!
+
+## Part 6: Naive Bayes
+
+1)  Running a Naive Bayes Classifier on the Credit Card data.
+
+<!-- end list -->
+
+``` r
+#Training on the train data
+naiveModel <- naiveBayes(PROFITABLE~AGE+DURATION+RENT+
+                             TELEPHONE+FOREIGN+CHK_ACCT+
+                             SAV_ACCT+HISTORY+JOB+TYPE,data=creditTrainDF)
+```
+
+2)  Making Prediction on test & validation data
+
+<!-- end list -->
+
+``` r
+#Making Predictions
+
+predictionProbsValid <- predict(naiveModel, newdata=creditValidDF, type='raw')
+#predictionProbsValid[,2]
+
+predictionProbsTest <- predict(naiveModel, newdata = creditTestDF, type = 'raw')
+#predictionProbsTest[,2]
+```
+
+3)  Accuracy on test & validation
+data
+
+<!-- end list -->
+
+``` r
+performanceValid = class_performance(confusion_matrix(predictionProbsValid[,2], 
+                                                      creditValidDF$PROFITABLE, 0.5))[1]
+
+#Accuracy on validation data is 72%
+performanceValid
+```
+
+    ## [1] 0.72
+
+``` r
+performanceTest = class_performance(confusion_matrix(predictionProbsTest[,2],
+                                                     creditTestDF$PROFITABLE, 0.5))[1]
+
+performanceTest
+```
+
+    ## [1] 0.68
+
+The accuracy on validation data is 72% The accuracy on test data is 68%
+
+Decision trees are still better than Naive Bayes.
+
+## Part 6: Ensemble Methods
+
+1)  Training a bagging model on the data.
+
+<!-- end list -->
+
+``` r
+bagMod <- randomForest(PROFITABLE~AGE+DURATION+RENT+TELEPHONE+
+                         FOREIGN+CHK_ACCT+SAV_ACCT+
+                         HISTORY+JOB+TYPE,
+                       data=creditTrainDF,
+                       #subset=test_instn,
+                       mtry=10,
+                       importance=TRUE) 
+
+bagPredsValid <- predict(bagMod,newdata=creditValidDF)
+class_performance(table(bagPredsValid, creditValidDF$PROFITABLE))[1]
+```
+
+    ## [1] 0.7028571
+
+Bagging as a accuracy of 69.7% on the validation data
+
+2)  Training a RandomForest model on the data.
+
+<!-- end list -->
+
+``` r
+rfMod <- randomForest(PROFITABLE~AGE+DURATION+RENT+TELEPHONE+
+                         FOREIGN+CHK_ACCT+SAV_ACCT+
+                         HISTORY+JOB+TYPE,
+                      data=creditTrainDF,
+                      #subset=test_instn,
+                      mtry=3,
+                      ntree=1000,
+                      importance=TRUE)
+
+rfPredsValid <- predict(rfMod,creditValidDF)
+
+class_performance(table(rfPredsValid, creditValidDF$PROFITABLE))[1]
+```
+
+    ## [1] 0.7028571
+
+Random Forest has an accuracy of 70.28% on validation data
+
+3)  Training a boosting model on the data.
+
+<!-- end list -->
+
+``` r
+creditDF$PROFITABLE <- as.numeric(as.character(creditDF$PROFITABLE))
+
+# 30% as test data and 70% as rest
+test_instn = sample(nrow(creditDF), 0.3*nrow(creditDF))
+creditTestDF <- creditDF[test_instn,]
+creditRestDF <- creditDF[-test_instn,]
+
+# 25% as validation data and 75% as training data
+valid_instn = sample(nrow(creditRestDF), 0.25*nrow(creditRestDF))
+creditValidDF <- creditRestDF[valid_instn,]
+creditTrainDF <- creditRestDF[-valid_instn,]
+
+
+boostMod <- gbm(PROFITABLE~AGE+DURATION+RENT+TELEPHONE+
+                         FOREIGN+CHK_ACCT+SAV_ACCT+
+                         HISTORY+JOB+TYPE,
+                data=creditTrainDF,
+                distribution="bernoulli",
+                n.trees=1000,
+                interaction.depth=5)
+
+
+boostPreds <- predict(boostMod,
+                      newdata=creditValidDF,
+                      type='response',
+                      n.trees=1000)
+#boostPreds
+class_performance(confusion_matrix(boostPreds, creditValidDF$PROFITABLE, 0.5))[1]
+```
+
+    ## [1] 0.7142857
+
+Boosting accuracy on validation data is 71.4%.
+
+4)  Testing accuracy on testing data.
+
+<!-- end list -->
+
+``` r
+#Prediction on testing data
+bagPredsTest <- predict(bagMod,newdata=creditTestDF)
+class_performance(table(bagPredsTest, creditTestDF$PROFITABLE))[1]
+```
+
+    ## [1] 0.8566667
+
+``` r
+rfPredsTest <- predict(rfMod,creditTestDF)
+class_performance(table(rfPredsTest, creditTestDF$PROFITABLE))[1]
+```
+
+    ## [1] 0.87
+
+``` r
+boostPredsTest <- predict(boostMod,newdata=creditTestDF,type='response',n.trees=1000)
+class_performance(confusion_matrix(boostPredsTest, creditTestDF$PROFITABLE, 0.5))[1]
+```
+
+    ## [1] 0.6966667
+
+Accuracy on testing data :
+
+Bagging - 85.66%
+
+Random Frest - 87%
+
+Boosting - 69.66%
+
+## Part 7: Lasso, Ridge & SVM
+
+1)  Preparing the data
+
+<!-- end list -->
+
+``` r
+credit_x <- model.matrix(PROFITABLE~AGE+DURATION+RENT+
+                             TELEPHONE+FOREIGN+CHK_ACCT+
+                             SAV_ACCT+HISTORY+JOB+TYPE,creditDF)
+credit_y <- creditDF$PROFITABLE
+
+train <- sample(nrow(creditDF),.7*nrow(creditDF))
+x_train <- credit_x[train,]
+x_test <- credit_x[-train,]
+
+y_train <- credit_y[train]
+y_test <- credit_y[-train]
+```
+
+2)  LASSO-Penalized logistics regression
+
+<!-- end list -->
+
+``` r
+k<-5
+grid <- 10^seq(10,-2,length=100)
+
+#family="binomial" yields logistic regression; family="gaussian" yields linear regression
+#alpha = 0 yields the lasso penalty, and alpha=1 the ridge penalty
+cv.out <- cv.glmnet(x_train, y_train, family="binomial", alpha=0, lambda=grid, nfolds=k)
+
+
+#Lasso Prediction and Accuracy
+bestlam <- cv.out$lambda.min
+predLasso <- predict(cv.out, s=bestlam, newx = x_test,type="response")
+#predLasso
+class_performance(confusion_matrix(predLasso,y_test,0.5))[1]
+```
+
+    ## [1] 0.7333333
+
+Testing accuracy is 73.66%.
+
+3)  RIDGE-Penalized logistic regression.
+
+<!-- end list -->
+
+``` r
+#ridge Regression
+cv.outRidge <- cv.glmnet(x_train, y_train, family="binomial", alpha=1, lambda=grid, nfolds=k)
+bestlam <- cv.outRidge$lambda.min
+predRidge <- predict(cv.out, s=bestlam, newx = x_test, type="response")
+class_performance(confusion_matrix(predRidge, y_test, 0.5))[1]
+```
+
+    ## [1] 0.73
+
+Testing accuracy is 74%.
+
+4)  SVM
+
+<!-- end list -->
+
+``` r
+creditDF$PROFITABLE <- as.factor(creditDF$PROFITABLE)
+
+# 30% as test data and 70% as rest
+test_instn = sample(nrow(creditDF), 0.3*nrow(creditDF))
+creditTestDF <- creditDF[test_instn,]
+creditRestDF <- creditDF[-test_instn,]
+
+# 25% as validation data and 75% as training data
+valid_instn = sample(nrow(creditRestDF), 0.25*nrow(creditRestDF))
+creditValidDF <- creditRestDF[valid_instn,]
+creditTrainDF <- creditRestDF[-valid_instn,]
+
+
+svmMod <- svm(PROFITABLE~AGE+DURATION+RENT+TELEPHONE+FOREIGN+CHK_ACCT+SAV_ACCT+HISTORY+JOB+TYPE, 
+               data=creditTrainDF, 
+               kernel='linear', 
+               cost=1, 
+               cross=k, 
+               probability=TRUE)
+
+svmPreds <- predict(svmMod, creditTestDF, probability=TRUE)
+
+svmMatrix <- confusion_matrix(attr(svmPreds, "probabilities")[,2], creditTestDF$PROFITABLE, 0.5)
+
+class_performance(svmMatrix)[1]
+```
+
+    ## [1] 0.2733333
+
+Accuracy on Test data is 28%%.
