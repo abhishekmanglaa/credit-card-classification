@@ -6,7 +6,7 @@
 
 ## Installation
 
-Using tidyverse and the strength of ggplot2, making impacting visualizations.
+Using the following libraries.
 
 ```bash
 library(readr)
