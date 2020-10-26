@@ -358,7 +358,7 @@ The accuracy on validation data is 72% The accuracy on test data is 68%
 
 Decision trees are still better than Naive Bayes.
 
-## Part 6: Ensemble Methods
+## Part 7: Ensemble Methods
 
 1)  Training a bagging model on the data.
 
@@ -477,7 +477,7 @@ Random Frest - 87%
 
 Boosting - 69.66%
 
-## Part 7: Lasso, Ridge & SVM
+## Part 8: Lasso, Ridge & SVM
 
 1)  Preparing the data
 
