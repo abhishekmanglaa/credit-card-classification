@@ -9,12 +9,16 @@
 Using tidyverse and the strength of ggplot2, making impacting visualizations.
 
 ```bash
-library(tidyverse)
-library(Metrics)
 library(readr)
 library(tree)
 library(ROCR)
 library(class)
+library(ggplot2)
+library(e1071)
+library(randomForest)
+library(gbm)
+library(ISLR)
+library(glmnet)
 ```
 You can also knit the file to a html document
 
@@ -27,6 +31,11 @@ install.packages('readr')
 install.packages('tree')
 install.packages('ROCR')
 install.packages('class')
+.
+.
+.
+.
+and the rest
 ```
 
 About R Markdown - https://r4ds.had.co.nz/r-markdown.html#r-markdown-basics
